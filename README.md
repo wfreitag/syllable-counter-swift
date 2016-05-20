@@ -20,6 +20,3 @@ The original [Java implementation](https://github.com/m09/syllable-counter) has 
 
 ## License
 Licensed under the Apache 2.0 License. Feel free to use and modify according to the terms expressed in the license. Contributions welcome.
-
-## More information
-Please visit the 
