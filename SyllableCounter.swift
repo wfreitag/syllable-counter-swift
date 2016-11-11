@@ -12,154 +12,156 @@
 import UIKit
 
 class SyllableCounter {
-    
-    // MARK: - Shared instance
-    
-    static let sharedInstance = SyllableCounter()
-    
-    // MARK: - Private properties
-    
-    private var exceptions: [String: Int]!
-    
-    private var addSyl: [NSRegularExpression!]!
-    private var subSyl: [NSRegularExpression!]!
-    
-    private let vowels: Set<Character> = ["a", "e", "i", "o", "u", "y"]
-    
-    // MARK: - Error enum
-    
-    private enum SyllableCounterError: ErrorType {
-        case BadRegex(String)
-        case MissingExceptionsDataAsset
-        case BadExceptionsData(String)
+  
+  // MARK: - Shared instance
+  
+  static let shared = SyllableCounter()
+  
+  // MARK: - Private properties
+  
+  private var exceptions: [String: Int]!
+  
+  private var addSyllables: [NSRegularExpression]!
+  private var subSyllables: [NSRegularExpression]!
+  
+  private let vowels: Set<Character> = ["a", "e", "i", "o", "u", "y"]
+  
+  // MARK: - Error enum
+  
+  private enum SyllableCounterError: Error {
+    case badRegex(String)
+    case missingExceptionsDataAsset
+    case badExceptionsData(String)
+  }
+  
+  // MARK: - Constructors
+  
+  init() {
+    do {
+      try populateAddSyllables()
+      try populateSubSyllables()
+      try populateExceptions()
+    }
+    catch SyllableCounterError.badRegex(let pattern) {
+      print("Bad Regex pattern: \(pattern)")
+    }
+    catch SyllableCounterError.missingExceptionsDataAsset {
+      print("Missing exceptions dataset.")
+    }
+    catch SyllableCounterError.badExceptionsData(let info) {
+      print("Problem parsing exceptions dataset: \(info)")
+    }
+    catch {
+      print("An unexpected error occured while initializing the syllable counter.")
+    }
+  }
+  
+  // MARK: - Setup
+  
+  private func populateAddSyllables() throws {
+    try addSyllables = buildRegexes(forPatterns: [
+      "ia", "riet", "dien", "iu", "io", "ii",
+      "[aeiouy]bl$", "mbl$", "tl$", "sl$", "[aeiou]{3}",
+      "^mc", "ism$", "(.)(?!\\1)([aeiouy])\\2l$", "[^l]llien", "^coad.",
+      "^coag.", "^coal.", "^coax.", "(.)(?!\\1)[gq]ua(.)(?!\\2)[aeiou]", "dnt$",
+      "thm$", "ier$", "iest$", "[^aeiou][aeiouy]ing$"])
+  }
+  
+  private func populateSubSyllables() throws {
+    try subSyllables = buildRegexes(forPatterns: [
+      "cial", "cian", "tia", "cius", "cious",
+      "gui", "ion", "iou", "sia$", ".ely$",
+      "ves$", "geous$", "gious$", "[^aeiou]eful$", ".red$"])
+  }
+  
+  private func populateExceptions() throws {
+    guard let exceptionsDataAsset = NSDataAsset(name: "SyllableCounter-Exceptions") else {
+      throw SyllableCounterError.missingExceptionsDataAsset
     }
     
-    // MARK: - Constructors
-    
-    init() {
-        do {
-            try populateAddSyl()
-            try populateSubSyl()
-            try populateExceptions()
-        }
-        catch SyllableCounterError.BadRegex(let pattern) {
-            print("Bad Regex pattern: \(pattern)")
-        }
-        catch SyllableCounterError.MissingExceptionsDataAsset {
-            print("Missing exceptions dataset.")
-        }
-        catch SyllableCounterError.BadExceptionsData(let info) {
-            print("Problem parsing exceptions dataset: \(info)")
-        }
-        catch {
-            print("An unexpected error occured while initializing the syllable counter.")
-        }
+    guard let exceptionsList = String(data: exceptionsDataAsset.data, encoding: String.Encoding.utf8) else {
+      throw SyllableCounterError.badExceptionsData("Not UTF-8 encoded")
     }
     
-    // MARK: - Setup
+    exceptions = [String: Int]()
     
-    private func populateAddSyl() throws {
-        try addSyl = buildRegexesForPatterns([
-            "ia", "riet", "dien", "iu", "io", "ii",
-            "[aeiouy]bl$", "mbl$", "tl$", "sl$", "[aeiou]{3}",
-            "^mc", "ism$", "(.)(?!\\1)([aeiouy])\\2l$", "[^l]llien", "^coad.",
-            "^coag.", "^coal.", "^coax.", "(.)(?!\\1)[gq]ua(.)(?!\\2)[aeiou]", "dnt$",
-            "thm$", "ier$", "iest$", "[^aeiou][aeiouy]ing$"])
+    for exception in exceptionsList.components(separatedBy: .newlines) {
+      if !exception.isEmpty && exception.characters.first != "#" { // skip empty lines and lines beginning with #
+        let exceptionItemParts = exception.components(separatedBy: " ")
+        if exceptionItemParts.count != 2 {
+          throw SyllableCounterError.badExceptionsData("Unexpected line: \(exception)")
+        }
+        
+        let key = exceptionItemParts[1]
+        let value = Int(exceptionItemParts[0])
+        
+        exceptions[key] = value
+      }
+    }
+  }
+  
+  private func buildRegexes(forPatterns patterns: [String]) throws -> [NSRegularExpression] {
+    return try patterns.map { pattern -> NSRegularExpression in
+      do {
+        let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .anchorsMatchLines])
+        return regex
+      }
+      catch {
+        throw SyllableCounterError.badRegex(pattern)
+      }
+    }
+  }
+  
+  // MARK: - Public methods
+  
+  func count(word: String) -> Int {
+    if word.characters.count <= 1 {
+      return word.characters.count
     }
     
-    private func populateSubSyl() throws {
-        try subSyl = buildRegexesForPatterns([
-            "cial", "cian", "tia", "cius", "cious",
-            "gui", "ion", "iou", "sia$", ".ely$",
-            "ves$", "geous$", "gious$", "[^aeiou]eful$", ".red$"])
+    var mutatedWord = word.lowercased(with: Locale(identifier: "en_US")).trimmingCharacters(in: .punctuationCharacters)
+    
+    if let exceptionValue = exceptions[mutatedWord] {
+      return exceptionValue
     }
     
-    private func populateExceptions() throws {
-        guard let exceptionsDataAsset = NSDataAsset(name: "SyllableCounter-Exceptions") else {
-            throw SyllableCounterError.MissingExceptionsDataAsset
-        }
-        
-        guard let exceptionsList = String(data: exceptionsDataAsset.data, encoding: NSUTF8StringEncoding) else {
-            throw SyllableCounterError.BadExceptionsData("Not UTF-8 encoded")
-        }
-        
-        exceptions = [String: Int]();
-        
-        for exceptionItem in exceptionsList.componentsSeparatedByCharactersInSet(NSCharacterSet.newlineCharacterSet()) {   // why it's time to ditch Cocoa legacy
-            if exceptionItem.characters.count > 0 && exceptionItem.characters.first != "#" {   // skip empty lines and lines beginning with #
-                let exceptionItemParts = exceptionItem.componentsSeparatedByString(" ")
-                if exceptionItemParts.count != 2 {
-                    throw SyllableCounterError.BadExceptionsData("Unexpected line: \(exceptionItem)")
-                }
-                
-                let key = exceptionItemParts[1]
-                let value = Int(exceptionItemParts[0])
-                
-                exceptions[key] = value
-            }
-        }
+    if mutatedWord.characters.last == "e" {
+      mutatedWord = String(mutatedWord.characters.dropLast())
     }
     
-    private func buildRegexesForPatterns(patterns: [String]) throws -> [NSRegularExpression] {
-        return try patterns.map({ (pattern) -> NSRegularExpression in
-            do {
-                let regex = try NSRegularExpression(pattern: pattern, options: [.CaseInsensitive, .AnchorsMatchLines])
-                return regex
-            }
-            catch {
-                throw SyllableCounterError.BadRegex(pattern)
-            }
-        })
+    var count = 0
+    var previousIsVowel = false
+    
+    for character in mutatedWord.characters {
+      let isVowel = vowels.contains(character)
+      if isVowel && !previousIsVowel {
+        count += 1
+      }
+      previousIsVowel = isVowel
     }
     
-    // MARK: - Public methods
-    
-    func count(word: String) -> Int {
-        if word.characters.count == 0 {
-            return 0
-        }
-        
-        if word.characters.count == 1 {
-            return 1
-        }
-        
-        var mutatedWord = word.lowercaseStringWithLocale(NSLocale(localeIdentifier: "en_US"))
-                              .stringByTrimmingCharactersInSet(NSCharacterSet.punctuationCharacterSet())
-        
-        if let exceptionValue = exceptions[mutatedWord] {
-            return exceptionValue
-        }
-        
-        if mutatedWord.characters.last == "e" {
-            mutatedWord = String(mutatedWord.characters.dropLast(1))
-        }
-        
-        var count = 0
-        var prevIsVowel = false
-        
-        for c in mutatedWord.characters {
-            let isVowel = vowels.contains(c)
-            if isVowel && !prevIsVowel {
-                count += 1
-            }
-            prevIsVowel = isVowel
-        }
-        
-        for pattern in addSyl {
-            let matches = pattern.matchesInString(mutatedWord, options: NSMatchingOptions(rawValue: 0), range: NSMakeRange(0, mutatedWord.characters.count))
-            if matches.count > 0 {
-                count += 1
-            }
-        }
-        
-        for pattern in subSyl {
-            let matches = pattern.matchesInString(mutatedWord, options: NSMatchingOptions(rawValue: 0), range: NSMakeRange(0, mutatedWord.characters.count))
-            if matches.count > 0 {
-                count -= 1
-            }
-        }
-        
-        return count > 0 ? count : 1;
+    for pattern in addSyllables {
+      let matches = pattern.matches(in: mutatedWord, options: NSRegularExpression.MatchingOptions(rawValue: 0), range: NSRange(location: 0, length: mutatedWord.characters.count))
+      if !matches.isEmpty {
+        count += 1
+      }
     }
     
+    for pattern in subSyllables {
+      let matches = pattern.matches(in: mutatedWord, options: NSRegularExpression.MatchingOptions(rawValue: 0), range: NSRange(location: 0, length: mutatedWord.characters.count))
+      if !matches.isEmpty {
+        count -= 1
+      }
+    }
+    
+    return (count > 0) ? count : 1
+  }
+  
+}
+
+extension String {
+  
+  var syllables: Int {
+    return SyllableCounter.shared.count(word: self)
+  }
 }
