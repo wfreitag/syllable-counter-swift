@@ -8,7 +8,7 @@ Swift 5.3 or newer on macOS or Linux.
 Add the following dependency to your project's `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/wfreitag/syllable-counter-swift.git", .revision("8bdd5abe0e429f3554a655cb40b1f9fda8dd8a18"))
+.package(url: "https://github.com/wfreitag/syllable-counter-swift.git", .revision("08cd024da5f30ac32939e718a2a964445a4aab4a"))
 ```
 
 ## How to use
