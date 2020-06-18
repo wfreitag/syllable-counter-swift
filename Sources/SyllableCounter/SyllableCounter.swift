@@ -11,11 +11,11 @@
 
 import Foundation
 
-class SyllableCounter {
+public class SyllableCounter {
   
   // MARK: - Shared instance
   
-  static let shared = SyllableCounter()
+  public static let shared = SyllableCounter()
   
   // MARK: - Private properties
   
@@ -36,7 +36,7 @@ class SyllableCounter {
   
   // MARK: - Constructors
   
-  init() {
+  private init() {
     do {
       try populateAddSyllables()
       try populateSubSyllables()
@@ -112,7 +112,7 @@ class SyllableCounter {
   
   // MARK: - Public methods
   
-  func count(word: String) -> Int {
+  public func count(word: String) -> Int {
     if word.count <= 1 {
       return word.count
     }
@@ -154,12 +154,11 @@ class SyllableCounter {
     
     return (count > 0) ? count : 1
   }
-  
+
 }
 
 extension String {
-  
-  var syllables: Int {
+  public var syllables: Int {
     return SyllableCounter.shared.count(word: self)
   }
 }
