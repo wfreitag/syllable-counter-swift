@@ -75,32 +75,27 @@ class SyllableCounter {
   }
   
   private func populateExceptions() throws {
-    // TODO
-    throw SyllableCounterError.missingExceptionsDataAsset
-
-    // guard let exceptionsDataAsset = NSDataAsset(name: "SyllableCounter-Exceptions") else {
-    //   throw SyllableCounterError.missingExceptionsDataAsset
-    // }
+    guard let exceptionsResourcePath = Bundle.module.path(forResource: "SyllableCounter-Exceptions", ofType: "txt") else {
+      throw SyllableCounterError.missingExceptionsDataAsset
+    }
     
-    // guard let exceptionsList = String(data: exceptionsDataAsset.data, encoding: String.Encoding.utf8) else {
-    //   throw SyllableCounterError.badExceptionsData("Not UTF-8 encoded")
-    // }
+    let exceptionsList = try String(contentsOfFile: exceptionsResourcePath, encoding: .utf8)
     
-    // exceptions = [String: Int]()
+    exceptions = [String: Int]()
     
-    // for exception in exceptionsList.components(separatedBy: .newlines) {
-    //   if !exception.isEmpty && exception.characters.first != "#" { // skip empty lines and lines beginning with #
-    //     let exceptionItemParts = exception.components(separatedBy: " ")
-    //     if exceptionItemParts.count != 2 {
-    //       throw SyllableCounterError.badExceptionsData("Unexpected line: \(exception)")
-    //     }
+    for exception in exceptionsList.components(separatedBy: .newlines) {
+      if !exception.isEmpty && exception.first != "#" { // skip empty lines and lines beginning with #
+        let exceptionItemParts = exception.components(separatedBy: " ")
+        if exceptionItemParts.count != 2 {
+          throw SyllableCounterError.badExceptionsData("Unexpected line: \(exception)")
+        }
         
-    //     let key = exceptionItemParts[1]
-    //     let value = Int(exceptionItemParts[0])
+        let key = exceptionItemParts[1]
+        let value = Int(exceptionItemParts[0])
         
-    //     exceptions[key] = value
-    //   }
-    // }
+        exceptions[key] = value
+      }
+    }
   }
   
   private func buildRegexes(forPatterns patterns: [String]) throws -> [NSRegularExpression] {
