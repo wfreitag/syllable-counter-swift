@@ -9,7 +9,7 @@
 //  https://github.com/m09/syllable-counter
 //
 
-import UIKit
+import Foundation
 
 class SyllableCounter {
   
@@ -75,29 +75,32 @@ class SyllableCounter {
   }
   
   private func populateExceptions() throws {
-    guard let exceptionsDataAsset = NSDataAsset(name: "SyllableCounter-Exceptions") else {
-      throw SyllableCounterError.missingExceptionsDataAsset
-    }
+    // TODO
+    throw SyllableCounterError.missingExceptionsDataAsset
+
+    // guard let exceptionsDataAsset = NSDataAsset(name: "SyllableCounter-Exceptions") else {
+    //   throw SyllableCounterError.missingExceptionsDataAsset
+    // }
     
-    guard let exceptionsList = String(data: exceptionsDataAsset.data, encoding: String.Encoding.utf8) else {
-      throw SyllableCounterError.badExceptionsData("Not UTF-8 encoded")
-    }
+    // guard let exceptionsList = String(data: exceptionsDataAsset.data, encoding: String.Encoding.utf8) else {
+    //   throw SyllableCounterError.badExceptionsData("Not UTF-8 encoded")
+    // }
     
-    exceptions = [String: Int]()
+    // exceptions = [String: Int]()
     
-    for exception in exceptionsList.components(separatedBy: .newlines) {
-      if !exception.isEmpty && exception.characters.first != "#" { // skip empty lines and lines beginning with #
-        let exceptionItemParts = exception.components(separatedBy: " ")
-        if exceptionItemParts.count != 2 {
-          throw SyllableCounterError.badExceptionsData("Unexpected line: \(exception)")
-        }
+    // for exception in exceptionsList.components(separatedBy: .newlines) {
+    //   if !exception.isEmpty && exception.characters.first != "#" { // skip empty lines and lines beginning with #
+    //     let exceptionItemParts = exception.components(separatedBy: " ")
+    //     if exceptionItemParts.count != 2 {
+    //       throw SyllableCounterError.badExceptionsData("Unexpected line: \(exception)")
+    //     }
         
-        let key = exceptionItemParts[1]
-        let value = Int(exceptionItemParts[0])
+    //     let key = exceptionItemParts[1]
+    //     let value = Int(exceptionItemParts[0])
         
-        exceptions[key] = value
-      }
-    }
+    //     exceptions[key] = value
+    //   }
+    // }
   }
   
   private func buildRegexes(forPatterns patterns: [String]) throws -> [NSRegularExpression] {
@@ -115,8 +118,8 @@ class SyllableCounter {
   // MARK: - Public methods
   
   func count(word: String) -> Int {
-    if word.characters.count <= 1 {
-      return word.characters.count
+    if word.count <= 1 {
+      return word.count
     }
     
     var mutatedWord = word.lowercased(with: Locale(identifier: "en_US")).trimmingCharacters(in: .punctuationCharacters)
@@ -125,14 +128,14 @@ class SyllableCounter {
       return exceptionValue
     }
     
-    if mutatedWord.characters.last == "e" {
-      mutatedWord = String(mutatedWord.characters.dropLast())
+    if mutatedWord.last == "e" {
+      mutatedWord = String(mutatedWord.dropLast())
     }
     
     var count = 0
     var previousIsVowel = false
     
-    for character in mutatedWord.characters {
+    for character in mutatedWord {
       let isVowel = vowels.contains(character)
       if isVowel && !previousIsVowel {
         count += 1
@@ -141,14 +144,14 @@ class SyllableCounter {
     }
     
     for pattern in addSyllables {
-      let matches = pattern.matches(in: mutatedWord, options: NSRegularExpression.MatchingOptions(rawValue: 0), range: NSRange(location: 0, length: mutatedWord.characters.count))
+      let matches = pattern.matches(in: mutatedWord, options: NSRegularExpression.MatchingOptions(rawValue: 0), range: NSRange(location: 0, length: mutatedWord.count))
       if !matches.isEmpty {
         count += 1
       }
     }
     
     for pattern in subSyllables {
-      let matches = pattern.matches(in: mutatedWord, options: NSRegularExpression.MatchingOptions(rawValue: 0), range: NSRange(location: 0, length: mutatedWord.characters.count))
+      let matches = pattern.matches(in: mutatedWord, options: NSRegularExpression.MatchingOptions(rawValue: 0), range: NSRange(location: 0, length: mutatedWord.count))
       if !matches.isEmpty {
         count -= 1
       }
