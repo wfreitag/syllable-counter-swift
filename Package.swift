@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "SyllableCounter",
+    name: "syllable-counter-swift",
     products: [
         // Products define the executables and libraries produced by a package, and make them visible to other packages.
         .library(
